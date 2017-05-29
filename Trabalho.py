@@ -2,7 +2,7 @@
 # Este programa implementa um servidor proxy Web com as funcionalidades
 # de filtro de conteudo e cache de paginas web.
 
-#Filtragem de requisicoes
+#Filtragem de requisicoes Tulio
 def filtragem():
 	import os.path
 	if os.path.isfile("whitelist.txt")==True:
