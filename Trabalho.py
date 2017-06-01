@@ -2,109 +2,129 @@
 # Este programa implementa um servidor proxy Web com as funcionalidades
 # de filtro de conteudo e cache de paginas web.
 
-#Filtragem de requisicoes
-def filtragem():
-	import os.path
-	if os.path.isfile("whitelist.txt")==True:
-		print("Whitelist found")
-		fileObj=open("whitelist.txt","r")
-		whitelist=[]
-		for line in fileObj:
-			whitelist.append(line)
-		fileObj.close()
-	if os.path.isfile("blacklist.txt")==True:
-		print("Blacklist found")
-		fileObj=open("blacklist.txt","r")
-		blacklist=[]
-		for line in fileObj:
-			blacklist.append(line)
-		fileObj.close()
+#Caching
+
+#Testa denyTerms
+def denyTerms(data):
+	denied=-1
+
 	if os.path.isfile("denyTerms.txt")==True:
-		print("denyTerms found")
+		#print("denyTerms found")
 		fileObj=open("denyTerms.txt","r")
 		denyTerms=[]
 		for line in fileObj:
 			denyTerms.append(line)
+			if(data.find(line)!=-1): #encontrou o denyTerm em data
+				denied=line  #armazena o termo proibido
+				break
 		fileObj.close()
-	print whitelist
 	
-#Caching
+	return denied
 
-
-
-class ThreadedServer(object):
-	def __init__(self,host,port):
-		import socket
-		import threading
-		self.host = host #o host da thread
-		self.port = port #a porta da thread
-		try:
-			self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		except socket.error:
-			print 'Nao foi possivel abrir o socket'
-			sys.exit(1)
+#Filtragem de requisicoes whitelist e blacklist
+def blackWhite(endereco):
+	import os.path
+	
+	black=-1 #nem na whitelist nem na blacklist
+	
+	#Leitura de arquivos
+	if os.path.isfile("whitelist.txt")==True: #encontrou arquivo whitelist
+		fileObj=open("whitelist.txt","r")
+		whitelist=[]
+		for line in fileObj:
+			whitelist.append(line)
+			found = line.find("\n")
+			if(found!=-1):
+				line=line[0:found]
+			if(line==endereco):
+				black=0 #encontrou na whitelist
+				break
+		fileObj.close() #finalizou leitura
 		
-		self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-		self.sock.bind((self.host, self.port)) #faz a conexao
+	if os.path.isfile("blacklist.txt")==True: #encontrou arquivo blacklist
+		fileObj=open("blacklist.txt","r")
+		blacklist=[]
+		for line in fileObj:
+			blacklist.append(line)
+			found = line.find("\n")
+			if(found!=-1):
+				line=line[0:found]
+			if(line==endereco):
+				black=1 #encontrou na blacklist
+				break
+		fileObj.close() #finalizou leitura
+	
+	#print black
+	return black
 
-	def listen(self):
-		import socket
-		import threading
-		self.sock.listen(5) #sock pode guardar ate 5 conexoes antes de descartar alguma
-		while True: #loop infinito
-			(client,address) = self.sock.accept() #aceita conexao externa
-			client.settimeout(60) #estabelece timeout de 60 segundos para cada thread
-			threading.Thread(target = self.listenToClient,args = (client,address)).start() #inicializa a thread para cada novo cliente
-			
-	def listenToClient(self,client,address):
-		import socket
-		import threading
-		size = 1024 #tamanho do buffer
-		while True:
-			try:
-				data = client.recv(size) #recebe dados do cliente
-				if data:
-					response = data  #Set the response to echo back the recieved data 
-					client.send(response)
-				else:
-					raise error('Client disconnected')
-			except:
-				client.close()
-				return False
-
-				
-#Proxy Basico
-def proxy():
+def parserInfo(data):
+	response = data
+	
+	found = data.find('www.')
+	if(found!=-1): #achou endereco
+		endereco=data[found:] #pega os dados a partir do www. ate o fim
+		endereco=endereco.split(" ")[0] #pega os endereco www.
+		#print endereco
+		found = endereco.find('/')
+		#print found
+		if(found!=-1):
+			endereco=endereco[0:found]
+		#print 'endereco '
+		#print endereco
+		black = blackWhite(endereco)
+		if(black==1):
+			response = 'Pagina bloqueada! Acesso nao permitido'
+			print response
+			return response #mensagem de erro
+		else: #pagina nao bloqueada
+			if(black==0): #esta na whitelist
+				return response #resposta direta (whitelist)
+			else: #nao esta nem na whitelist nem na blacklist
+				#print 'DenyTerms'
+				response=denyTerms(data) #testa denyTerms	
+				return response		
+	else:
+		return found #retorna -1
+		
+def listenToClient(client,address): #captura os dados da coneccao thread e trabalha eles
 	import socket
-	import sys
-	import signal
 	import threading
-	
-	TCP_IP = '127.0.0.1'
-	TCP_PORT = 5005
-	BUFFER_SIZE = 1024
-	
-	socket.setdefaulttimeout = 0.50
-	#signal.signal(signal.SIGINT,self.shutdown)
-	
+	size = 1024 #tamanho do buffer
+	while 1: #loop infinito para receber dados do cliente
+		try:
+			data = client.recv(size) #recebe dados do cliente (info do pacote)
+			if data: #Se existem dados
+				response = parserInfo(data)
+				client.send(response) #Envia a resposta
+			else: #se nao existem dados
+				raise error('Client disconnected')
+		except:
+			client.close()
+			return False
+
+def initConect(host,port): #inicializa o socket e cria threads
+	import socket
+	import threading
+	import sys
 	try:
-		s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	except socket.error:
+		s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #cria um socket
+	except s.error:
 		print 'Nao foi possivel abrir o socket'
 		sys.exit(1)
-	
-	s.bind((TCP_IP, TCP_PORT)) #s ouve do host TCP_IP na porta TCP_PORT
-	s.listen(4) #s pode guardar ate 4 conexoes antes de descartar alguma
-		
-	while 1:
-		(conn, addr) = s.accept() #aceita conexoes exteriores
-		print 'Connection address:', addr
-		data = conn.recv(BUFFER_SIZE)
-		if not data: break
-		print "received data:", data
-		#conn.send(data)  # echo
-	conn.close()
+	s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) #define opcoes do socket
+	s.bind((host, port)) #conecta o socket
+	s.listen(5) #sock pode guardar ate 5 conexoes antes de descartar alguma
+	while 1: #loop infinito
+		try:
+			(client,address) = s.accept() #aceita conexao externa
+			client.settimeout(30) #estabelece timeout de 30 segundos para cada thread
+			t=threading.Thread(target = listenToClient,args = (client,address)) #define uma thread para ouvir o cliente
+			#Thread => instancia a thread listenToClient e envia os parametros client e address
+			t.start() #inicializa a thread para cada novo cliente
+		except KeyboardInterrupt:
+			print 'Programa interrompido!'
+			s.close()
+			sys.exit(0)
 
 if __name__ == '__main__':
-	ThreadedServer('127.0.0.1',5005).listen() #inicia uma main thread e faz ela escutar
-	#proxy() #proxy basico antigo. Nao eh multi-thread
+	initConect('127.0.0.1',5005)
