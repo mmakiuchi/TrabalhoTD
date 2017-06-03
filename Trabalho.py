@@ -101,13 +101,12 @@ def listenToClient(client,address):	#captura os dados da conexao thread e trabal
 		try:
 			data = client.recv(size) #recebe dados do cliente (info do pacote)
 			if data: #se existem dados
-				#print 'data'
 				response = parserInfo(data)
 				if(response==0): #whitelist
 					address = getAddress(data)
-					
 					#enviar data para o endereco address
-					req = request.post('http://www.unb.br',data)
+
+					req = requests.post('http://www.unb.br',data)
 					print 'oi'
 					print req.text
 					client.send(req)
@@ -131,6 +130,7 @@ def initConect(host,port): #inicializa o socket e cria threads
 	import sys
 	try:
 		s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #cria um socket
+		
 	except s.error:
 		print 'Nao foi possivel abrir o socket'
 		sys.exit(1)
@@ -139,6 +139,7 @@ def initConect(host,port): #inicializa o socket e cria threads
 	s.listen(5) #s pode guardar ate 5 conexoes antes de descartar alguma
 	while 1: #loop infinito
 		try:
+			
 			(client,address) = s.accept() #aceita conexao externa
 			client.settimeout(30) #estabelece timeout de 30 segundos para cada thread
 			t=threading.Thread(target = listenToClient,args = (client,address)) #define uma thread para ouvir o cliente
