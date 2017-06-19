@@ -104,12 +104,11 @@ def listenToClient(client,address):	#captura os dados da conexao thread e trabal
 				response = parserInfo(data)
 				if(response==0): #whitelist
 					address = getAddress(data)
-					#enviar data para o endereco address
-
-					req = requests.post('http://www.unb.br',data)
-					print 'oi'
-					print req.text
-					client.send(req)
+					req = requests.get('http://'+address)
+					#print 'oi'
+					client.send(req.content)
+					#print 'passou'
+					client.close()
 				else:
 					if(response==1): #blacklist
 						client.send('Erro! Pagina bloqueada')
@@ -141,9 +140,16 @@ def initConect(host,port): #inicializa o socket e cria threads
 		try:
 			
 			(client,address) = s.accept() #aceita conexao externa
+			host1,port1 = address
+			print host
+			print port
+			print host1
+			print port1
+			#s.connect((host,port))
 			client.settimeout(30) #estabelece timeout de 30 segundos para cada thread
 			t=threading.Thread(target = listenToClient,args = (client,address)) #define uma thread para ouvir o cliente
-			#Thread => instancia a thread listenToClient e envia os parametros client e address
+			#Thread => instancia a thread listenToClient e envia os parametros client e address	
+			
 			t.start() #inicia a thread
 		#Interrupcao de teclado
 		except KeyboardInterrupt:
