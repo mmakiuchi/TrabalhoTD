@@ -106,15 +106,29 @@ def listenToClient(client,address):	#captura os dados da conexao thread e trabal
 					address = getAddress(data)
 					req = requests.get('http://'+address)
 					#print 'oi'
-					client.send(req.content)
+					client.send(req.content)					
+					#print req.text				
 					#print 'passou'
 					client.close()
 				else:
 					if(response==1): #blacklist
 						client.send('Erro! Pagina bloqueada')
+						client.close()
 					else: #nao esta nem na whitelist nem na blacklitst
 						#envia a requisicao e testa por denyTerms	
-						k=1
+						address = getAddress(data)
+						req = requests.get('http://'+address)
+						#print req.content[:15]						
+						if(req.content[:15]=='<!DOCTYPE HTML>'):
+							#print "entrou"
+							dados=req.content							
+							x=denyTerms(dados)
+							print x
+							if x==-1:
+								client.send(req.content)
+								client.close()
+						client.send(req.content)
+						client.close()
 			else:
 				raise error('Client disconnected')
 		except:
