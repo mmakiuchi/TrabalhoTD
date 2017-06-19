@@ -97,6 +97,9 @@ def listenToClient(client,address):	#captura os dados da conexao thread e trabal
 	import threading
 	import requests
 	size = 2048	#tamanho do buffer
+	negativeAnswer = '<!DOCTYPE html><html><body style="background-color:papayawhip;"><h1 style="font-family:verdana;text-align:center;">Página Bloqueada</h1>
+<img src="proibido.jpg" alt="Gandalf" width="226" height="389"></body></html>'
+	
 	while 1: #recebe dados do cliente
 		try:
 			data = client.recv(size) #recebe dados do cliente (info do pacote)
@@ -111,7 +114,7 @@ def listenToClient(client,address):	#captura os dados da conexao thread e trabal
 					client.close()
 				else:
 					if(response==1): #blacklist
-						client.send('Erro! Pagina bloqueada')
+						client.send(negativeAnswer)
 						client.close()
 					else: #nao esta nem na whitelist nem na blacklitst
 						#envia a requisicao e testa por denyTerms	
@@ -130,7 +133,7 @@ def listenToClient(client,address):	#captura os dados da conexao thread e trabal
 								client.close()
 								print 'passou pelo teste de denyTerms'
 							else: #eh denyTerms
-								client.send('Erro! Pagina bloqueada')
+								client.send(negativeAnswer)
 								client.close()
 						client.send(req.content)
 						client.close()
