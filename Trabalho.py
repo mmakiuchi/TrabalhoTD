@@ -10,16 +10,16 @@ def denyTerms(data):
 	denied=-1 #nao ha denyTerms
 
 	if os.path.isfile("denyTerms.txt")==True:	
-		fileObj=open("denyTerms.txt","r")		#Abre arquivo contendo termos proibidos
-		denyTerms=[]					#Lista para adicionar os termos proibidos
-
-		#Temos que inserir uma comparacao para testar se o item ja existe dentro da lista ou para que essa funcao seja chamada apenas uma vez
+		fileObj=open("denyTerms.txt","r") #Abre arquivo contendo termos proibidos
+		#denyTerms=[] #Lista para adicionar os termos proibidos
 
 		for line in fileObj:
-			denyTerms.append(line)	#Adiciona  termo na lista
-			if(data.find(line)!=-1): 		#encontrou o denyTerm em data
-				denied=line  			#armazena o termo proibido
-				break				#caso seja um termo proibido a funcao retorna para a chamada com a linha que contem o termo proibido
+			#denyTerms.append(line)	#Adiciona  termo na lista
+			if(data.find(line)!=-1): #encontrou o denyTerm em data
+				denied=line  #armazena o termo proibido
+				fileObj.close()				
+				return denied				
+				break
 		fileObj.close()
 	
 	#print denied
@@ -108,7 +108,6 @@ def listenToClient(client,address):	#captura os dados da conexao thread e trabal
 					#print 'oi'
 					client.send(req.content)					
 					#print req.text				
-					#print 'passou'
 					client.close()
 				else:
 					if(response==1): #blacklist
@@ -118,14 +117,20 @@ def listenToClient(client,address):	#captura os dados da conexao thread e trabal
 						#envia a requisicao e testa por denyTerms	
 						address = getAddress(data)
 						req = requests.get('http://'+address)
-						#print req.content[:15]						
+						#print req.content						
 						if(req.content[:15]=='<!DOCTYPE HTML>'):
-							#print "entrou"
-							dados=req.content							
-							x=denyTerms(dados)
-							print x
-							if x==-1:
+							print "!!!!!doctype"
+							dados=req.content			
+							print 'Antes de chamar a funcao deny'				
+							achouDeny=denyTerms(dados)
+							print 'Depois de chamar a funcao deny'
+							print achouDeny
+							if achouDeny==-1: #nao eh denyTerms
 								client.send(req.content)
+								client.close()
+								print 'passou pelo teste de denyTerms'
+							else: #eh denyTerms
+								client.send('Erro! Pagina bloqueada')
 								client.close()
 						client.send(req.content)
 						client.close()
@@ -152,13 +157,8 @@ def initConect(host,port): #inicializa o socket e cria threads
 	s.listen(5) #s pode guardar ate 5 conexoes antes de descartar alguma
 	while 1: #loop infinito
 		try:
-			
 			(client,address) = s.accept() #aceita conexao externa
 			host1,port1 = address
-			print host
-			print port
-			print host1
-			print port1
 			#s.connect((host,port))
 			client.settimeout(30) #estabelece timeout de 30 segundos para cada thread
 			t=threading.Thread(target = listenToClient,args = (client,address)) #define uma thread para ouvir o cliente
