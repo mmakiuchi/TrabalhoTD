@@ -11,16 +11,15 @@ def denyTerms(data):
 	#print data
 	if os.path.isfile("denyTerms.txt")==True:	
 		fileObj=open("denyTerms.txt","r") #Abre arquivo contendo termos proibidos
-		
 		for line in fileObj:
-			if(data.find(line)!=-1): #encontrou o denyTerm em data
-				denied=line  #armazena o termo proibido
-				fileObj.close()				
-				return denied				
+			print line
+			found = line.find(line)			
+			if(found!=-1): #encontrou o denyTerm em data
+				denied=line  #armazena o termo proibido							
 				break
 		fileObj.close()
 	
-	#print denied
+	print denied
 	return denied
 
 #Filtragem de requisicoes whitelist e blacklist
@@ -111,11 +110,13 @@ def listenToClient(client,address):	#captura os dados da conexao thread e trabal
 					else: #nao esta nem na whitelist nem na blacklitst
 						#envia a requisicao e testa por denyTerms	
 						address = getAddress(data)
+						#print data
 						req = requests.get('http://'+address)					
+						dados = req.content					
 						#print req.content						
-						if(req.content.find('<!DOCTYPE html>')!=-1):
+						if(dados.find('<!DOCTYPE html>')!=-1):
 							print '!!!!!doctype'
-							dados=req.content			
+							print type(dados)		
 							print 'Antes de chamar a funcao deny'				
 							achouDeny=denyTerms(dados)
 							print 'Depois de chamar a funcao deny'
@@ -135,7 +136,6 @@ def listenToClient(client,address):	#captura os dados da conexao thread e trabal
 			client.close() #caso a conexao nao seja iniciada fecha a conexao
 			return False
 
-			
 #Funcao de estabelecimento de conexao do proxy com cliente
 def initConect(host,port): #inicializa o socket e cria threads
 	import socket
@@ -149,13 +149,13 @@ def initConect(host,port): #inicializa o socket e cria threads
 		sys.exit(1)
 	s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) #define opcoes do socket
 	s.bind((host, port)) #conecta o socket
-	s.listen(5) #s pode guardar ate 5 conexoes antes de descartar alguma
+	s.listen(60) #s pode guardar ate 5 conexoes antes de descartar alguma
 	while 1: #loop infinito
 		try:
 			(client,address) = s.accept() #aceita conexao externa
 			host1,port1 = address
 			#s.connect((host,port))
-			client.settimeout(30) #estabelece timeout de 30 segundos para cada thread
+			client.settimeout(60) #estabelece timeout de 60 segundos para cada thread
 			t=threading.Thread(target = listenToClient,args = (client,address)) #define uma thread para ouvir o cliente
 			#Thread => instancia a thread listenToClient e envia os parametros client e address	
 			
