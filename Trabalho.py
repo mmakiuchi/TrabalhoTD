@@ -8,13 +8,11 @@
 #Testa denyTerms
 def denyTerms(data):
 	denied=-1 #nao ha denyTerms
-
+	#print data
 	if os.path.isfile("denyTerms.txt")==True:	
 		fileObj=open("denyTerms.txt","r") #Abre arquivo contendo termos proibidos
-		#denyTerms=[] #Lista para adicionar os termos proibidos
-
+		
 		for line in fileObj:
-			#denyTerms.append(line)	#Adiciona  termo na lista
 			if(data.find(line)!=-1): #encontrou o denyTerm em data
 				denied=line  #armazena o termo proibido
 				fileObj.close()				
@@ -62,8 +60,6 @@ def blackWhite(endereco):
 	return black
 
 def getAddress(data):
-	response = data
-	
 	found = data.find('www.')
 	if(found!=-1): #achou endereco
 		endereco=data[found:] #pega os dados a partir do www. ate o fim
@@ -72,12 +68,10 @@ def getAddress(data):
 	
 #Inicia a leitura da requisicao do usuario e chama as funcoes de teste de condicoes para 'BlackWhite' e 'DenyTerms'
 def parserInfo(data):
+	import sys
 	response = data
 	
-	#print data
-	
 	found = data.find('www.')
-	#print found
 	if(found!=-1): #achou endereco
 		endereco=data[found:] #pega os dados a partir do www. ate o fim
 		endereco=endereco.split(" ")[0] #pega os endereco www.
@@ -85,11 +79,10 @@ def parserInfo(data):
 		if(found!=-1):
 			endereco=endereco[0:found]
 		black = blackWhite(endereco)
-		return black
+		return black #retorna 0 para whitelist, 1 para blacklist e -1 para nem um nem outro
 	else: #nao achou endereco www. nos dados
-		
-		#O que retornar?
-		return found #retorna -1 que foi configurado dentro da funcao blackwhite
+		found = 2
+		return found #retorna 2
 		
 #Funcao do Proxy para escutar inicialmente o cliente
 def listenToClient(client,address):	#captura os dados da conexao thread e trabalha eles
@@ -97,8 +90,7 @@ def listenToClient(client,address):	#captura os dados da conexao thread e trabal
 	import threading
 	import requests
 	size = 2048	#tamanho do buffer
-	negativeAnswer = '<!DOCTYPE html><html><body style="background-color:papayawhip;"><h1 style="font-family:verdana;text-align:center;">Página Bloqueada</h1>
-<img src="proibido.jpg" alt="Gandalf" width="226" height="389"></body></html>'
+	negativeAnswer = '<!DOCTYPE html><html><body style="background-color:papayawhip;"><h1 style="font-family:verdana;text-align:center;">Pagina Bloqueada</h1></body></html>'
 	
 	while 1: #recebe dados do cliente
 		try:
@@ -119,10 +111,10 @@ def listenToClient(client,address):	#captura os dados da conexao thread e trabal
 					else: #nao esta nem na whitelist nem na blacklitst
 						#envia a requisicao e testa por denyTerms	
 						address = getAddress(data)
-						req = requests.get('http://'+address)
+						req = requests.get('http://'+address)					
 						#print req.content						
-						if(req.content[:15]=='<!DOCTYPE HTML>'):
-							print "!!!!!doctype"
+						if(req.content.find('<!DOCTYPE html>')!=-1):
+							print '!!!!!doctype'
 							dados=req.content			
 							print 'Antes de chamar a funcao deny'				
 							achouDeny=denyTerms(dados)
