@@ -8,12 +8,16 @@
 #Testa denyTerms
 def denyTerms(data):
 	import os.path
+	import string
+	import sys
+	
 	denied=-1 #nao ha denyTerms
 	#print data
 	if os.path.isfile("denyTerms.txt")==True:	
 		fileObj=open("denyTerms.txt","r") #Abre arquivo contendo termos proibidos
 		for line in fileObj:
-			print line
+			#line=line.decode('utf8')
+			#print line
 			found = data.find(line)			
 			if(found!=-1): #encontrou o denyTerm em data
 				print 'Achou deny term'				
@@ -21,11 +25,14 @@ def denyTerms(data):
 				denied=1						
 				break
 		fileObj.close()
+	#print denied
 	return denied
 
 #Filtragem de requisicoes whitelist e blacklist
 def blackWhite(endereco):
 	import os.path
+	import sys
+	import string
 	
 	black=-1 #nem na whitelist nem na blacklist
 	
@@ -60,15 +67,31 @@ def blackWhite(endereco):
 	return black
 
 def getAddress(data):
+	import sys
+	import string
+	
 	found = data.find('www.')
 	if(found!=-1): #achou endereco
 		endereco=data[found:] #pega os dados a partir do www. ate o fim
 		endereco=endereco.split(" ")[0]
 	return(endereco)
 	
+def separaLog(data):
+	import sys
+	import string
+	
+	dados=0
+	found = data.find('HTTP/1.1')
+	if(found!=-1):
+		found = found+7
+		dados = data[0:found]
+	return dados
+
+
 #Inicia a leitura da requisicao do usuario e chama as funcoes de teste de condicoes para 'BlackWhite' e 'DenyTerms'
 def parserInfo(data):
 	import sys
+	import string
 	response = data
 	
 	found = data.find('www.')
@@ -90,24 +113,31 @@ def listenToClient(client,address):	#captura os dados da conexao thread e trabal
 	import threading
 	import requests
 	import sys
+	import os.path
+	import datetime
+	import string
 	size = 2048	#tamanho do buffer
-	negativeAnswer = '<!DOCTYPE html><html><body style="background-color:papayawhip;"><h1 style="font-family:verdana;text-align:center;">Pagina Bloqueada</h1></body></html>'
+	blacklistAnswer = '<!DOCTYPE html><html><body style="background-color:papayawhip;"><h1 style="font-family:verdana;text-align:center;">Pagina Bloqueada</h1></body></html>'
+	denyAnswer = '<!DOCTYPE html><html><body style="background-color:papayawhip;"><h1 style="font-family:verdana;text-align:center;">Conteudo Bloqueado</h1></body></html>'
 	
 	while 1: #recebe dados do cliente
 		try:
 			data = client.recv(size) #recebe dados do cliente (info do pacote)
 			if data: #se existem dados
 				response = parserInfo(data)
+				fileObj=open("log.txt","a") #abre o arquivo log.txt para adicionar info
+				requisicao = separaLog(data) #pega a primeira linha da requisicao para compor o log (exemplo GET aprender.unb.br HTTP/1.1)
+				now=datetime.datetime.now()
+				fileObj.write(requisicao+str(now)+'\n') #guarda a linha da requisicao+hora atual
+				fileObj.close()
 				if(response==0): #whitelist
 					address = getAddress(data)
 					req = requests.get('http://'+address)
-					#print 'oi'
-					client.send(req.content)					
-					#print req.text				
+					client.send(req.content)
 					client.close()
 				else:
 					if(response==1): #blacklist
-						client.send(negativeAnswer)
+						client.send(blacklistAnswer)
 						client.close()
 					else: #nao esta nem na whitelist nem na blacklitst
 						#envia a requisicao e testa por denyTerms	
@@ -115,12 +145,15 @@ def listenToClient(client,address):	#captura os dados da conexao thread e trabal
 						req = requests.get('http://'+address)					
 						dados = req.content				
 						if(dados.find('<!DOCTYPE html>')!=-1):				
+							print 'testa denyterms'
 							achouDeny=denyTerms(dados)
 							if achouDeny==-1: #nao eh denyTerms
+								#print 'nao tem deny terms'
 								client.send(req.content)
 								client.close()
 							else: #eh denyTerms
-								client.send(negativeAnswer)
+								#print 'tem denyterms'
+								client.send(denyAnswer)
 								client.close()
 						else:
 							client.send(req.content)
