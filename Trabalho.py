@@ -7,19 +7,20 @@
 
 #Testa denyTerms
 def denyTerms(data):
+	import os.path
 	denied=-1 #nao ha denyTerms
 	#print data
 	if os.path.isfile("denyTerms.txt")==True:	
 		fileObj=open("denyTerms.txt","r") #Abre arquivo contendo termos proibidos
 		for line in fileObj:
 			print line
-			found = line.find(line)			
+			found = data.find(line)			
 			if(found!=-1): #encontrou o denyTerm em data
-				denied=line  #armazena o termo proibido							
+				print 'Achou deny term'				
+				print line				
+				denied=1						
 				break
 		fileObj.close()
-	
-	print denied
 	return denied
 
 #Filtragem de requisicoes whitelist e blacklist
@@ -88,6 +89,7 @@ def listenToClient(client,address):	#captura os dados da conexao thread e trabal
 	import socket #importando biblioteca Socket para implementar a interface/porta de comunicacao entre proxy e cliente
 	import threading
 	import requests
+	import sys
 	size = 2048	#tamanho do buffer
 	negativeAnswer = '<!DOCTYPE html><html><body style="background-color:papayawhip;"><h1 style="font-family:verdana;text-align:center;">Pagina Bloqueada</h1></body></html>'
 	
@@ -110,26 +112,19 @@ def listenToClient(client,address):	#captura os dados da conexao thread e trabal
 					else: #nao esta nem na whitelist nem na blacklitst
 						#envia a requisicao e testa por denyTerms	
 						address = getAddress(data)
-						#print data
 						req = requests.get('http://'+address)					
-						dados = req.content					
-						#print req.content						
-						if(dados.find('<!DOCTYPE html>')!=-1):
-							print '!!!!!doctype'
-							print type(dados)		
-							print 'Antes de chamar a funcao deny'				
+						dados = req.content				
+						if(dados.find('<!DOCTYPE html>')!=-1):				
 							achouDeny=denyTerms(dados)
-							print 'Depois de chamar a funcao deny'
-							print achouDeny
 							if achouDeny==-1: #nao eh denyTerms
 								client.send(req.content)
 								client.close()
-								print 'passou pelo teste de denyTerms'
 							else: #eh denyTerms
 								client.send(negativeAnswer)
 								client.close()
-						client.send(req.content)
-						client.close()
+						else:
+							client.send(req.content)
+							client.close()
 			else:
 				raise error('Client disconnected')
 		except:
