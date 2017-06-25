@@ -4,6 +4,40 @@
 
 #Caching
 
+def caching(req,address):
+	import socket #importando biblioteca Socket para implementar a interface/porta de comunicacao entre proxy e cliente
+	import requests
+	import sys
+	import os.path
+	import string
+
+	dir = './caching'
+	if os.path.isdir(dir):
+		#print address
+		diretorio='./caching/'+str(address)
+		print diretorio
+		if os.path.isdir(diretorio):			
+			fileObj = open(diretorio+".txt","a")
+			print 'aqui'
+			fileObj.write(req.content)
+			print 'salvou'		
+			fileObj.close()
+		else:
+			os.makedirs('./caching/'+address)
+			print 'aqui2'
+			fileObj = open(diretorio+'.txt',"a")
+			print 'salvou2'	
+			fileObj.write(str(req.content))
+			fileObj.close()
+	else:
+        	os.makedirs(dir)
+		fileObj=open(address,"a")
+		print "escreveu arquivo"		
+		fileObj.write(req.content)
+		print 'passou'
+		fileObj.close()
+	
+	return 1
 
 #Testa denyTerms
 def denyTerms(data):
@@ -70,6 +104,7 @@ def getAddress(data):
 	import sys
 	import string
 	
+	#print data
 	found = data.find('www.')
 	if(found!=-1): #achou endereco
 		endereco=data[found:] #pega os dados a partir do www. ate o fim
@@ -127,13 +162,18 @@ def listenToClient(client,address):	#captura os dados da conexao thread e trabal
 				response = parserInfo(data)
 				fileObj=open("log.txt","a") #abre o arquivo log.txt para adicionar info
 				requisicao = separaLog(data) #pega a primeira linha da requisicao para compor o log (exemplo GET aprender.unb.br HTTP/1.1)
+				a = socket.gethostbyaddr(socket.gethostname())
+				ipclient = str(a)
+				#print ipclient				
 				now=datetime.datetime.now()
-				fileObj.write(requisicao+str(now)+'\n') #guarda a linha da requisicao+hora atual
+				fileObj.write(requisicao+'\t'+str(now)+'\t'+ipclient+'\n') #guarda a linha da requisicao+hora atual
 				fileObj.close()
+
 				if(response==0): #whitelist
 					address = getAddress(data)
 					req = requests.get('http://'+address)
 					client.send(req.content)
+					x=caching(req,address)#Falta procurar o arquivo texto e abrir ele a partir do caching
 					client.close()
 				else:
 					if(response==1): #blacklist
@@ -169,6 +209,8 @@ def initConect(host,port): #inicializa o socket e cria threads
 	import socket
 	import threading
 	import sys
+	import fcntl
+	import struct
 	try:
 		s = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #cria um socket
 		
@@ -182,6 +224,11 @@ def initConect(host,port): #inicializa o socket e cria threads
 		try:
 			(client,address) = s.accept() #aceita conexao externa
 			host1,port1 = address
+			#print client
+			#print port
+			#print host
+			#print host1
+			#print port1
 			#s.connect((host,port))
 			client.settimeout(60) #estabelece timeout de 60 segundos para cada thread
 			t=threading.Thread(target = listenToClient,args = (client,address)) #define uma thread para ouvir o cliente
