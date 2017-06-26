@@ -13,16 +13,15 @@ def testacaching(address):
 	x=1
 	#procura pelo endereco dentro das pastas
 	pasta="./caching/"+address+".txt"
-	existe=os.path.isfile(pasta)
-	#print existe
+	existe=os.path.isfile(str(pasta))
 	#abre o conteudo da pasta
 	if existe==1:
 		#print 'aqui'
 		try: 
-			fileObj = open(pasta, 'r') 
-		except FileNotFoundError:
+			fileObj = open(str(pasta), 'r') 
+			#print fileObj
+		except FileNotFoundError==1:
 			x=0
-			#print 'aqui2'
 			requisition=fileObj.read()
 			client.send(str(requisition))
 			client.close()
@@ -193,7 +192,6 @@ def listenToClient(client,address):	#captura os dados da conexao thread e trabal
 				if(response==0): #whitelist
 					address = getAddress(data)
 					if testacaching(address)==1:
-						print 1
 						req = requests.get('http://'+address)
 						client.send(req.content)
 						caching(req,address)#Falta procurar o arquivo texto e abrir ele a partir do caching
