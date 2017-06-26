@@ -3,6 +3,31 @@
 # de filtro de conteudo e cache de paginas web.
 
 #Caching
+def testacaching(address):
+	import socket #importando biblioteca Socket para implementar a interface/porta de comunicacao entre proxy e cliente
+	import requests
+	import sys
+	import os.path
+	import string
+	
+	x=1
+	#procura pelo endereco dentro das pastas
+	pasta="./caching/"+address+".txt"
+	existe=os.path.isfile(pasta)
+	#print pasta
+	#abre o conteudo da pasta
+	if existe==1:
+		x=0
+		fileObj = open(pasta,"r")
+		requisition=fileObj.read()	
+		#print requisition
+		client.send(str(requisition))
+		fileObj.close()
+		client.close()
+	#envia para o cliente se encontrar
+
+
+	return x
 
 def caching(req,address):
 	import socket #importando biblioteca Socket para implementar a interface/porta de comunicacao entre proxy e cliente
@@ -11,33 +36,28 @@ def caching(req,address):
 	import os.path
 	import string
 
-	dir = './caching'
+#Solucao para a caching, fazer um novo request caso de erro ao carregar um pacote caching
+
+
+	dir = './caching/'
 	if os.path.isdir(dir):
-		#print address
 		diretorio='./caching/'+str(address)
-		print diretorio
 		if os.path.isdir(diretorio):			
 			fileObj = open(diretorio+".txt","a")
-			print 'aqui'
-			fileObj.write(req.content)
-			print 'salvou'		
+			fileObj.write(str(req.content))
 			fileObj.close()
 		else:
-			os.makedirs('./caching/'+address)
-			print 'aqui2'
-			fileObj = open(diretorio+'.txt',"a")
-			print 'salvou2'	
+			os.makedirs('./caching/'+str(address))
+			fileObj = open(diretorio+'.txt',"a")	
 			fileObj.write(str(req.content))
 			fileObj.close()
 	else:
         	os.makedirs(dir)
-		fileObj=open(address,"a")
-		print "escreveu arquivo"		
+		fileObj = open(address+".txt","a")		
 		fileObj.write(req.content)
-		print 'passou'
 		fileObj.close()
 	
-	return 1
+	return
 
 #Testa denyTerms
 def denyTerms(data):
@@ -171,10 +191,12 @@ def listenToClient(client,address):	#captura os dados da conexao thread e trabal
 
 				if(response==0): #whitelist
 					address = getAddress(data)
-					req = requests.get('http://'+address)
-					client.send(req.content)
-					x=caching(req,address)#Falta procurar o arquivo texto e abrir ele a partir do caching
-					client.close()
+					if testacaching(address)==1:
+						req = requests.get('http://'+address)
+						client.send(req.content)
+						caching(req,address)#Falta procurar o arquivo texto e abrir ele a partir do caching
+						client.close()
+						#return o request que foi lido
 				else:
 					if(response==1): #blacklist
 						client.send(blacklistAnswer)
