@@ -21,11 +21,11 @@ def testacaching(address):
 			fileObj = open(str(pasta), 'r') 
 			#print fileObj
 		except FileNotFoundError==1:
-			x=0
+			x=0		
 			requisition=fileObj.read()
 			client.send(str(requisition))
 			client.close()
-			fileObj.close()
+		fileObj.close()
 	#envia para o cliente se encontrar
 	return x
 
@@ -61,6 +61,8 @@ def caching(req,address):
 
 #Testa denyTerms
 def denyTerms(data):
+	import socket #importando biblioteca Socket para implementar a interface/porta de comunicacao entre proxy e cliente
+	import requests
 	import os.path
 	import string
 	import sys
@@ -214,7 +216,7 @@ def listenToClient(client,address):	#captura os dados da conexao thread e trabal
 								client.send(req.content)
 								client.close()
 							else: #eh denyTerms
-								#print 'tem denyterms'
+								print 'tem denyterms'
 								client.send(denyAnswer)
 								client.close()
 						else:
